@@ -15,10 +15,7 @@
 #include <me_Uart.h>
 #include <me_Console.h>
 
-static TUint_2 NumSecondsPassed = 0;
-static TUint_2 MilliSecondsPart = 0;
-
-static me_Counters::TCounter2 Rtc;
+me_Counters::TCounter3 Rtc;
 
 const TUint_2 MaxSeconds = 10;
 
@@ -27,6 +24,8 @@ struct TTimestamp
   TUint_2 S;
   TUint_2 Ms;
 };
+
+TTimestamp RunTime = { 0, 0 };
 
 void PrintTimestamp(
   TTimestamp Ts
@@ -92,21 +91,17 @@ TBool AddTimestamp(
   return true;
 }
 
-// TTimestamp GetTime() __attribute__ ((optimize("O0")));
-
 TTimestamp GetTime()
 {
   TTimestamp Result;
 
   TUint_1 PrevSreg = SREG;
   cli();
-  Result = ToTimestamp(NumSecondsPassed, MilliSecondsPart);
+  Result = RunTime;
   SREG = PrevSreg;
 
   return Result;
 }
-
-// TBool TimestampIsLess(TTimestamp, TTimestamp) __attribute__ ((optimize("O0")));
 
 TBool TimestampIsLess(
   TTimestamp Ts,
@@ -127,8 +122,6 @@ TBool TimestampIsLess(
 
   return false;
 }
-
-// void Delay(TTimestamp) __attribute__ ((optimize("O0")));
 
 void Delay(
   TTimestamp DeltaTs
@@ -169,20 +162,20 @@ TBool Delay_ms(
   return true;
 }
 
-extern "C" void __vector_11() __attribute__((signal, used));
+extern "C" void __vector_7() __attribute__((signal, used));
 
-// Interrupt 11 is for counter 2 mark A event
-void __vector_11()
+// Interrupt 7 is for counter 3 mark A event
+void __vector_7()
 {
-  ++MilliSecondsPart;
+  ++RunTime.Ms;
 
-  if (MilliSecondsPart == 1000)
+  if (RunTime.Ms == 1000)
   {
-    MilliSecondsPart = 0;
-    ++NumSecondsPassed;
+    RunTime.Ms = 0;
+    ++RunTime.S;
 
-    if (NumSecondsPassed == MaxSeconds)
-      NumSecondsPassed = 0;
+    if (RunTime.S == MaxSeconds)
+      RunTime.S = 0;
   }
 }
 
@@ -200,21 +193,22 @@ void setup()
 {
   me_Uart::Init(me_Uart::Speed_115k_Bps);
 
+  // Set counter mark A to 1 ms
   {
     using namespace me_Counters;
 
-    Rtc.SetAlgorithm(TAlgorithm_Counter2::Count_ToMarkA);
-    Rtc.Control->DriveSource = (TUint_1) TDriveSource_Counter2::Internal_SlowBy2Pow6;
+    Rtc.SetAlgorithm(TAlgorithm_Counter3::Count_ToMarkA);
+    Rtc.Control->Speed = (TUint_1) TSpeed_Counter3::SlowBy2Pow6;
     Rtc.Control->PinActionOnMarkA = (TUint_1) TPinAction::Toggle;
     *Rtc.Current = 0;
     *Rtc.MarkA = 249;
     Rtc.Wiring->EnableMarkAInterrupt = true;
   }
 
-  const TUint_1 OutputPin = 9;
+  const TUint_1 OutputPin = 11;
   pinMode(OutputPin, OUTPUT);
 
-  TestAddTs();
+  // TestAddTs();
 
   Console.Print("Init done.");
 }
@@ -222,9 +216,8 @@ void setup()
 void loop()
 {
   Delay_ms(1100);
-  // Delay_us(653);
-  // delay(1000);
+  // delay(1100);
 
-  // PrintTimestamp(GetTime());
+  PrintTimestamp(GetTime());
   // Console.Print("Tic");
 }
