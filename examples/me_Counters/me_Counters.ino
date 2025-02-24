@@ -15,8 +15,9 @@
 #include <me_Uart.h>
 #include <me_Console.h>
 
-static volatile TUint_4 NumSecondsPassed = 0;
+static volatile TUint_2 NumSecondsPassed = 0;
 static volatile TUint_2 MilliSecondsPart = 0;
+
 static me_Counters::TCounter2 Rtc;
 
 const TUint_2 MaxSeconds = 10;
@@ -25,10 +26,7 @@ struct TTimestamp
 {
   TUint_2 S;
   TUint_2 Ms;
-  TUint_2 Us;
 };
-
-const TTimestamp ZeroTimestamp = { 0, 0, 0 };
 
 void PrintTimestamp(
   TTimestamp Ts
@@ -37,46 +35,19 @@ void PrintTimestamp(
   Console.Write("Timestamp (");
   Console.Print(Ts.S);
   Console.Print(Ts.Ms);
-  Console.Print(Ts.Us);
   Console.Write(")");
   Console.EndLine();
 }
 
 TTimestamp ToTimestamp(
   TUint_2 S,
-  TUint_2 Ms,
-  TUint_2 Us
+  TUint_2 Ms
 )
 {
   TTimestamp Result;
 
   Result.S = S;
   Result.Ms = Ms;
-  Result.Us = Us;
-
-  return Result;
-}
-
-TTimestamp MicrosToTimestamp(
-  TUint_2 NumMicros
-)
-{
-  TTimestamp Result;
-
-  TUint_2 Remainder = NumMicros;
-
-  Result.Us = Remainder % 1000;
-
-  Remainder /= 1000;
-
-  Result.Ms = Remainder % 1000;
-
-  Remainder /= 1000;
-
-  if (Remainder > MaxSeconds)
-    Remainder = MaxSeconds;
-
-  Result.S = Remainder;
 
   return Result;
 }
@@ -88,8 +59,6 @@ TTimestamp MillisToTimestamp(
   TTimestamp Result;
 
   TUint_2 Remainder = NumMills;
-
-  Result.Us = 0;
 
   Result.Ms = Remainder % 1000;
 
@@ -108,15 +77,8 @@ TBool AddTimestamp(
   TTimestamp Ts
 )
 {
-  Dest->Us += Ts.Us;
   Dest->Ms += Ts.Ms;
   Dest->S += Ts.S;
-
-  if (Dest->Us >= 1000)
-  {
-    Dest->Us -= 1000;
-    ++Dest->Ms;
-  }
 
   if (Dest->Ms >= 1000)
   {
@@ -133,69 +95,69 @@ TBool AddTimestamp(
   return true;
 }
 
-TBool TimestampIsBefore(
-  TTimestamp CurrentTs,
-  TTimestamp BorderTs
+void TestAddTs()
+{
+  TTimestamp TimeA = { 7, 625 };
+  TTimestamp Delta = { 1, 373 };
+  PrintTimestamp(TimeA);
+  PrintTimestamp(Delta);
+  AddTimestamp(&TimeA, Delta);
+  PrintTimestamp(TimeA);
+}
+
+TTimestamp GetTime()
+{
+  return ToTimestamp(NumSecondsPassed, MilliSecondsPart);
+}
+
+TBool TimeIsBefore(
+  TTimestamp Border
 )
 {
-  if (CurrentTs.S < BorderTs.S)
+  TTimestamp Time = GetTime();
+
+  if (Time.S < Border.S)
     return true;
 
-  if (CurrentTs.S > BorderTs.S)
+  if (Time.S > Border.S)
     return false;
 
-  if (CurrentTs.Ms < BorderTs.Ms)
+  if (Time.Ms < Border.Ms)
     return true;
 
-  if (CurrentTs.Ms > BorderTs.Ms)
+  if (Time.Ms > Border.Ms)
     return false;
-
-  if (CurrentTs.Us < BorderTs.Us)
-    return true;
 
   return false;
 }
 
-TBool TimestampIsAfter(
-  TTimestamp CurrentTs,
+TBool TimeIsAfter(
   TTimestamp BorderTs
 )
 {
-  return !TimestampIsBefore(CurrentTs, BorderTs);
-}
-
-TUint_2 GetMicrosPart()
-{
-  return (TUint_4) (*Rtc.Current) * 1000 / 249;
-}
-
-TTimestamp GetTimestamp()
-{
-  return ToTimestamp(NumSecondsPassed, MilliSecondsPart, GetMicrosPart());
+  return !TimeIsBefore(BorderTs);
 }
 
 void WaitTill(
   TTimestamp Ts
 )
 {
-  while (TimestampIsBefore(GetTimestamp(), Ts));
+  while (TimeIsBefore(Ts));
 }
 
 void WaitAfter(
   TTimestamp Ts
 )
 {
-  while (TimestampIsAfter(GetTimestamp(), Ts));
+  while (TimeIsAfter(Ts));
   WaitTill(Ts);
 }
 
-void Delay_us(
-  TUint_2 NumMicroseconds
+void Delay(
+  TTimestamp DeltaTs
 )
 {
-  TTimestamp DeltaTs = MicrosToTimestamp(NumMicroseconds);
-
-  TTimestamp EndTs = GetTimestamp();
+  TTimestamp EndTs = GetTime();
 
   if (!AddTimestamp(&EndTs, DeltaTs))
     WaitAfter(EndTs);
@@ -207,14 +169,7 @@ void Delay_ms(
   TUint_2 NumMilliseconds
 )
 {
-  TTimestamp DeltaTs = MillisToTimestamp(NumMilliseconds);
-
-  TTimestamp EndTs = GetTimestamp();
-
-  if (!AddTimestamp(&EndTs, DeltaTs))
-    WaitAfter(EndTs);
-  else
-    WaitTill(EndTs);
+  Delay(MillisToTimestamp(NumMilliseconds));
 }
 
 extern "C" void __vector_11() __attribute__((interrupt, used));
@@ -252,6 +207,8 @@ void setup()
   const TUint_1 OutputPin = 9;
   pinMode(OutputPin, OUTPUT);
 
+  TestAddTs();
+
   Console.Print("Init done.");
 }
 
@@ -261,6 +218,6 @@ void loop()
   // Delay_us(653);
   // delay(1000);
 
-  PrintTimestamp(GetTimestamp());
+  PrintTimestamp(GetTime());
   // Console.Print("Tic");
 }
