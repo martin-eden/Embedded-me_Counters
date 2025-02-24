@@ -2,7 +2,7 @@
 
 /*
   Author: Martin Eden
-  Last mod.: 2025-02-23
+  Last mod.: 2025-02-24
 */
 
 /*
@@ -233,7 +233,7 @@ namespace me_Counters
     volatile TStatus * Status = (TStatus *) 53;
     TInterrupts * Wiring = (TInterrupts *) 110;
     TBehavior_Counter1 * Control = (TBehavior_Counter1 *) 68;
-    TUint_1 * Current = (TUint_1 *) 70;
+    volatile TUint_1 * Current = (TUint_1 *) 70;
     TUint_1 * MarkA = (TUint_1 *) 71;
     TUint_1 * MarkB = (TUint_1 *) 72;
 
@@ -263,7 +263,7 @@ namespace me_Counters
     volatile TStatus * Status = (TStatus *) 54;
     TInterrupts * Wiring = (TInterrupts *) 111;
     TBehavior_Counter2 * Control = (TBehavior_Counter2 *) 128;
-    TUint_2 * Current = (TUint_2 *) 132;
+    volatile TUint_2 * Current = (TUint_2 *) 132;
     TUint_2 * EventMark = (TUint_2 *) 134;
     TUint_2 * MarkA = (TUint_2 *) 136;
     TUint_2 * MarkB = (TUint_2 *) 138;
@@ -293,7 +293,7 @@ namespace me_Counters
     volatile TStatus * Status = (TStatus *) 55;
     TInterrupts * Wiring = (TInterrupts *) 112;
     TBehavior_Counter3 * Control = (TBehavior_Counter3 *) 176;
-    TUint_1 * Current = (TUint_1 *) 178;
+    volatile TUint_1 * Current = (TUint_1 *) 178;
     TUint_1 * MarkA = (TUint_1 *) 179;
     TUint_1 * MarkB = (TUint_1 *) 180;
     TAsyncState * AsyncState = (TAsyncState *) 182;
@@ -325,4 +325,5 @@ namespace me_Counters
   2025-01-01
   2025-02-21
   2025-02-23
+  2025-02-24
 */
