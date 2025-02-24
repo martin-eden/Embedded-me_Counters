@@ -15,8 +15,8 @@
 #include <me_Uart.h>
 #include <me_Console.h>
 
-static volatile TUint_2 NumSecondsPassed = 0;
-static volatile TUint_2 MilliSecondsPart = 0;
+static TUint_2 NumSecondsPassed = 0;
+static TUint_2 MilliSecondsPart = 0;
 
 static me_Counters::TCounter2 Rtc;
 
@@ -52,24 +52,21 @@ TTimestamp ToTimestamp(
   return Result;
 }
 
-TTimestamp MillisToTimestamp(
+TBool MillisToTimestamp(
+  TTimestamp * Result,
   TUint_2 NumMills
 )
 {
-  TTimestamp Result;
+  TUint_2 Millis = NumMills % 1000;
+  TUint_2 Seconds = NumMills / 1000;
 
-  TUint_2 Remainder = NumMills;
+  if (Seconds >= MaxSeconds)
+    return false;
 
-  Result.Ms = Remainder % 1000;
+  Result->Ms = Millis;
+  Result->S = Seconds;
 
-  Remainder /= 1000;
-
-  if (Remainder > MaxSeconds)
-    Remainder = MaxSeconds;
-
-  Result.S = Remainder;
-
-  return Result;
+  return true;
 }
 
 TBool AddTimestamp(
@@ -95,84 +92,84 @@ TBool AddTimestamp(
   return true;
 }
 
-void TestAddTs()
-{
-  TTimestamp TimeA = { 7, 625 };
-  TTimestamp Delta = { 1, 373 };
-  PrintTimestamp(TimeA);
-  PrintTimestamp(Delta);
-  AddTimestamp(&TimeA, Delta);
-  PrintTimestamp(TimeA);
-}
+// TTimestamp GetTime() __attribute__ ((optimize("O0")));
 
 TTimestamp GetTime()
 {
-  return ToTimestamp(NumSecondsPassed, MilliSecondsPart);
+  TTimestamp Result;
+
+  TUint_1 PrevSreg = SREG;
+  cli();
+  Result = ToTimestamp(NumSecondsPassed, MilliSecondsPart);
+  SREG = PrevSreg;
+
+  return Result;
 }
 
-TBool TimeIsBefore(
+// TBool TimestampIsLess(TTimestamp, TTimestamp) __attribute__ ((optimize("O0")));
+
+TBool TimestampIsLess(
+  TTimestamp Ts,
   TTimestamp Border
 )
 {
-  TTimestamp Time = GetTime();
-
-  if (Time.S < Border.S)
+  if (Ts.S < Border.S)
     return true;
 
-  if (Time.S > Border.S)
+  if (Ts.S > Border.S)
     return false;
 
-  if (Time.Ms < Border.Ms)
+  if (Ts.Ms < Border.Ms)
     return true;
 
-  if (Time.Ms > Border.Ms)
+  if (Ts.Ms > Border.Ms)
     return false;
 
   return false;
 }
 
-TBool TimeIsAfter(
-  TTimestamp BorderTs
-)
-{
-  return !TimeIsBefore(BorderTs);
-}
-
-void WaitTill(
-  TTimestamp Ts
-)
-{
-  while (TimeIsBefore(Ts));
-}
-
-void WaitAfter(
-  TTimestamp Ts
-)
-{
-  while (TimeIsAfter(Ts));
-  WaitTill(Ts);
-}
+// void Delay(TTimestamp) __attribute__ ((optimize("O0")));
 
 void Delay(
   TTimestamp DeltaTs
 )
 {
   TTimestamp EndTs = GetTime();
+  AddTimestamp(&EndTs, DeltaTs);
 
-  if (!AddTimestamp(&EndTs, DeltaTs))
-    WaitAfter(EndTs);
-  else
-    WaitTill(EndTs);
+  while (!TimestampIsLess(GetTime(), EndTs));
+  while (TimestampIsLess(GetTime(), EndTs));
+
+  if (TimestampIsLess(GetTime(), EndTs))
+  {
+    Console.Indent();
+
+    Console.Print("WTF?!");
+
+    Console.Write("Wait ");
+    PrintTimestamp(EndTs);
+    Console.Write("Real ");
+    PrintTimestamp(GetTime());
+
+    Console.Unindent();
+  }
 }
 
-void Delay_ms(
+TBool Delay_ms(
   TUint_2 NumMilliseconds
 )
 {
-  Delay(MillisToTimestamp(NumMilliseconds));
+  TTimestamp DelayTs;
+
+  if (!MillisToTimestamp(&DelayTs, NumMilliseconds))
+    return false;
+
+  Delay(DelayTs);
+
+  return true;
 }
 
-extern "C" void __vector_11() __attribute__((interrupt, used));
+extern "C" void __vector_11() __attribute__((signal, used));
 
 // Interrupt 11 is for counter 2 mark A event
 void __vector_11()
@@ -187,6 +184,16 @@ void __vector_11()
     if (NumSecondsPassed == MaxSeconds)
       NumSecondsPassed = 0;
   }
+}
+
+void TestAddTs()
+{
+  TTimestamp TimeA = { 8, 787 };
+  TTimestamp Delta = { 1, 213 };
+  PrintTimestamp(TimeA);
+  PrintTimestamp(Delta);
+  AddTimestamp(&TimeA, Delta);
+  PrintTimestamp(TimeA);
 }
 
 void setup()
@@ -214,10 +221,10 @@ void setup()
 
 void loop()
 {
-  Delay_ms(1373);
+  Delay_ms(1100);
   // Delay_us(653);
   // delay(1000);
 
-  PrintTimestamp(GetTime());
+  // PrintTimestamp(GetTime());
   // Console.Print("Tic");
 }
