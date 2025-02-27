@@ -6,7 +6,7 @@
 
 /*
   Author: Martin Eden
-  Last mod.: 2025-02-24
+  Last mod.: 2025-02-27
 */
 
 #include <me_Counters.h>
@@ -18,6 +18,8 @@
 me_Counters::TCounter3 Rtc;
 
 const TUint_2 MaxSeconds = 10;
+
+const TUint_1 DebugPin = 13;
 
 struct TTimestamp
 {
@@ -56,37 +58,11 @@ TBool MillisToTimestamp(
   TUint_2 NumMills
 )
 {
-  TUint_2 Millis = NumMills % 1000;
-  TUint_2 Seconds = NumMills / 1000;
+  Result->Ms = NumMills % 1000;
+  Result->S = NumMills / 1000;
 
-  if (Seconds >= MaxSeconds)
+  if (Result->S >= MaxSeconds)
     return false;
-
-  Result->Ms = Millis;
-  Result->S = Seconds;
-
-  return true;
-}
-
-TBool AddTimestamp(
-  TTimestamp * Dest,
-  TTimestamp Ts
-)
-{
-  Dest->Ms += Ts.Ms;
-  Dest->S += Ts.S;
-
-  if (Dest->Ms >= 1000)
-  {
-    Dest->Ms -= 1000;
-    ++Dest->S;
-  }
-
-  if (Dest->S >= MaxSeconds)
-  {
-    Dest->S -= MaxSeconds;
-    return false;
-  }
 
   return true;
 }
@@ -123,28 +99,89 @@ TBool TimestampIsLess(
   return false;
 }
 
+TBool BalanceTimestamp(
+  TTimestamp * Ts
+)
+{
+  TBool Result = false;
+
+  while (Ts->Ms >= 1000)
+  {
+    Ts->Ms -= 1000;
+    ++Ts->S;
+  }
+
+  if (Ts->S >= MaxSeconds)
+    Result = true;
+
+  while (Ts->S >= MaxSeconds)
+    Ts->S -= MaxSeconds;
+
+  return Result;
+}
+
+// TBool AddTimestamp(TTimestamp *, TTimestamp) __attribute__ ((optimize("O0")));
+
+TBool AddTimestamp(
+  TTimestamp * Dest,
+  TTimestamp Ts
+)
+{
+  Dest->Ms += Ts.Ms;
+  Dest->S += Ts.S;
+
+  TBool IsWrapped = BalanceTimestamp(Dest);
+
+  if (IsWrapped)
+    return false;
+
+  return true;
+}
+
+TBool TimestampIsNonZero(
+  TTimestamp Ts
+)
+{
+  return (Ts.S != 0) || (Ts.Ms != 0);
+}
+
 void Delay(
   TTimestamp DeltaTs
 )
 {
+  const TUint_4 MaxNumIters = (TUint_4) 256 * 64 * 1000 * 2;
+  TUint_4 NumIters;
+
   TTimestamp EndTs = GetTime();
-  AddTimestamp(&EndTs, DeltaTs);
+  TBool IsWrapped = AddTimestamp(&EndTs, DeltaTs);
 
-  while (!TimestampIsLess(GetTime(), EndTs));
-  while (TimestampIsLess(GetTime(), EndTs));
-
-  if (TimestampIsLess(GetTime(), EndTs))
+  if (IsWrapped)
   {
-    Console.Indent();
+    NumIters = 0;
+    while (TimestampIsNonZero(GetTime()))
+    {
+      ++NumIters;
+      if (NumIters > MaxNumIters)
+      {
+        Console.Print("Still suck.");
+        PrintTimestamp(EndTs);
+        PrintTimestamp(GetTime());
+        while (true);
+      }
+    }
+  }
 
-    Console.Print("WTF?!");
-
-    Console.Write("Wait ");
-    PrintTimestamp(EndTs);
-    Console.Write("Real ");
-    PrintTimestamp(GetTime());
-
-    Console.Unindent();
+  NumIters = 0;
+  while (TimestampIsLess(GetTime(), EndTs))
+  {
+    ++NumIters;
+    if (NumIters > MaxNumIters)
+    {
+      Console.Print("Suck.");
+      PrintTimestamp(EndTs);
+      PrintTimestamp(GetTime());
+      while (true);
+    }
   }
 }
 
@@ -162,31 +199,23 @@ TBool Delay_ms(
   return true;
 }
 
-extern "C" void __vector_7() __attribute__((signal, used));
-
-// Interrupt 7 is for counter 3 mark A event
-void __vector_7()
+// Set time for next tick
+void AdvanceTime()
 {
   ++RunTime.Ms;
 
   if (RunTime.Ms == 1000)
-  {
-    RunTime.Ms = 0;
-    ++RunTime.S;
+    digitalWrite(DebugPin, !digitalRead(DebugPin));
 
-    if (RunTime.S == MaxSeconds)
-      RunTime.S = 0;
-  }
+  BalanceTimestamp(&RunTime);
 }
 
-void TestAddTs()
+extern "C" void __vector_7() __attribute__((signal, used));
+
+// Interrupt 7 is for counter 3 mark A event. Expected to trigger every ms
+void __vector_7()
 {
-  TTimestamp TimeA = { 8, 787 };
-  TTimestamp Delta = { 1, 213 };
-  PrintTimestamp(TimeA);
-  PrintTimestamp(Delta);
-  AddTimestamp(&TimeA, Delta);
-  PrintTimestamp(TimeA);
+  AdvanceTime();
 }
 
 void setup()
@@ -199,16 +228,12 @@ void setup()
 
     Rtc.SetAlgorithm(TAlgorithm_Counter3::Count_ToMarkA);
     Rtc.Control->Speed = (TUint_1) TSpeed_Counter3::SlowBy2Pow6;
-    Rtc.Control->PinActionOnMarkA = (TUint_1) TPinAction::Toggle;
     *Rtc.Current = 0;
     *Rtc.MarkA = 249;
     Rtc.Wiring->EnableMarkAInterrupt = true;
   }
 
-  const TUint_1 OutputPin = 11;
-  pinMode(OutputPin, OUTPUT);
-
-  // TestAddTs();
+  pinMode(DebugPin, OUTPUT);
 
   Console.Print("Init done.");
 }
@@ -218,6 +243,6 @@ void loop()
   Delay_ms(1100);
   // delay(1100);
 
-  PrintTimestamp(GetTime());
+  // PrintTimestamp(GetTime());
   // Console.Print("Tic");
 }
