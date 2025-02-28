@@ -6,7 +6,7 @@
 
 /*
   Author: Martin Eden
-  Last mod.: 2025-02-27
+  Last mod.: 2025-02-28
 */
 
 #include <me_Counters.h>
@@ -17,7 +17,7 @@
 
 me_Counters::TCounter3 Rtc;
 
-const TUint_2 MaxSeconds = 10;
+const TUint_2 MaxSeconds = 1000;
 
 const TUint_1 DebugPin = 13;
 
@@ -27,7 +27,32 @@ struct TTimestamp
   TUint_2 Ms;
 };
 
-TTimestamp RunTime = { 0, 0 };
+volatile TTimestamp RunTime = { 0, 0 };
+
+TTimestamp GetTime()
+{
+  TTimestamp Result;
+
+  TUint_1 PrevSreg = SREG;
+  cli();
+  // Fucking great language: you can have "volatile" record but can't copy it
+  Result.S = RunTime.S;
+  Result.Ms = RunTime.Ms;
+  SREG = PrevSreg;
+
+  return Result;
+}
+
+void SetTime(
+  TTimestamp Ts
+)
+{
+  TUint_1 PrevSreg = SREG;
+  cli();
+  RunTime.S = Ts.S;
+  RunTime.Ms = Ts.Ms;
+  SREG = PrevSreg;
+}
 
 void PrintTimestamp(
   TTimestamp Ts
@@ -40,17 +65,19 @@ void PrintTimestamp(
   Console.EndLine();
 }
 
-TTimestamp ToTimestamp(
+TBool ToTimestamp(
+  TTimestamp * Result,
   TUint_2 S,
   TUint_2 Ms
 )
 {
-  TTimestamp Result;
+  if ((S >= MaxSeconds) || (Ms >= 1000))
+    return false;
 
-  Result.S = S;
-  Result.Ms = Ms;
+  Result->S = S;
+  Result->Ms = Ms;
 
-  return Result;
+  return true;
 }
 
 TBool MillisToTimestamp(
@@ -58,52 +85,34 @@ TBool MillisToTimestamp(
   TUint_2 NumMills
 )
 {
-  Result->Ms = NumMills % 1000;
-  Result->S = NumMills / 1000;
-
-  if (Result->S >= MaxSeconds)
-    return false;
-
-  return true;
+  return ToTimestamp(Result, NumMills / 1000, NumMills % 1000);
 }
 
-TTimestamp GetTime()
-{
-  TTimestamp Result;
-
-  TUint_1 PrevSreg = SREG;
-  cli();
-  Result = RunTime;
-  SREG = PrevSreg;
-
-  return Result;
-}
-
-TBool TimestampIsLess(
-  TTimestamp Ts,
-  TTimestamp Border
+TSint_1 CompareTimestamps(
+  TTimestamp A,
+  TTimestamp B
 )
 {
-  if (Ts.S < Border.S)
-    return true;
+  if (A.S < B.S)
+    return -1;
 
-  if (Ts.S > Border.S)
-    return false;
+  if (A.S > B.S)
+    return 1;
 
-  if (Ts.Ms < Border.Ms)
-    return true;
+  if (A.Ms < B.Ms)
+    return -1;
 
-  if (Ts.Ms > Border.Ms)
-    return false;
+  if (A.Ms > B.Ms)
+    return 1;
 
-  return false;
+  return 0;
 }
 
 TBool BalanceTimestamp(
   TTimestamp * Ts
 )
 {
-  TBool Result = false;
+  TBool IsWrapped = false;
 
   while (Ts->Ms >= 1000)
   {
@@ -112,23 +121,21 @@ TBool BalanceTimestamp(
   }
 
   if (Ts->S >= MaxSeconds)
-    Result = true;
+    IsWrapped = true;
 
   while (Ts->S >= MaxSeconds)
     Ts->S -= MaxSeconds;
 
-  return Result;
+  return IsWrapped;
 }
-
-// TBool AddTimestamp(TTimestamp *, TTimestamp) __attribute__ ((optimize("O0")));
 
 TBool AddTimestamp(
   TTimestamp * Dest,
   TTimestamp Ts
 )
 {
-  Dest->Ms += Ts.Ms;
   Dest->S += Ts.S;
+  Dest->Ms += Ts.Ms;
 
   TBool IsWrapped = BalanceTimestamp(Dest);
 
@@ -138,51 +145,17 @@ TBool AddTimestamp(
   return true;
 }
 
-TBool TimestampIsNonZero(
-  TTimestamp Ts
-)
-{
-  return (Ts.S != 0) || (Ts.Ms != 0);
-}
-
 void Delay(
   TTimestamp DeltaTs
 )
 {
-  const TUint_4 MaxNumIters = (TUint_4) 256 * 64 * 1000 * 2;
-  TUint_4 NumIters;
-
   TTimestamp EndTs = GetTime();
-  TBool IsWrapped = AddTimestamp(&EndTs, DeltaTs);
+  TBool IsWrapped = !AddTimestamp(&EndTs, DeltaTs);
 
   if (IsWrapped)
-  {
-    NumIters = 0;
-    while (TimestampIsNonZero(GetTime()))
-    {
-      ++NumIters;
-      if (NumIters > MaxNumIters)
-      {
-        Console.Print("Still suck.");
-        PrintTimestamp(EndTs);
-        PrintTimestamp(GetTime());
-        while (true);
-      }
-    }
-  }
+    while (CompareTimestamps(GetTime(), EndTs) >= 0);
 
-  NumIters = 0;
-  while (TimestampIsLess(GetTime(), EndTs))
-  {
-    ++NumIters;
-    if (NumIters > MaxNumIters)
-    {
-      Console.Print("Suck.");
-      PrintTimestamp(EndTs);
-      PrintTimestamp(GetTime());
-      while (true);
-    }
-  }
+  while (CompareTimestamps(GetTime(), EndTs) < 0);
 }
 
 TBool Delay_ms(
@@ -199,23 +172,17 @@ TBool Delay_ms(
   return true;
 }
 
-// Set time for next tick
-void AdvanceTime()
-{
-  ++RunTime.Ms;
-
-  if (RunTime.Ms == 1000)
-    digitalWrite(DebugPin, !digitalRead(DebugPin));
-
-  BalanceTimestamp(&RunTime);
-}
-
 extern "C" void __vector_7() __attribute__((signal, used));
 
 // Interrupt 7 is for counter 3 mark A event. Expected to trigger every ms
 void __vector_7()
 {
-  AdvanceTime();
+  TTimestamp Ts = GetTime();
+
+  ++Ts.Ms;
+  BalanceTimestamp(&Ts);
+
+  SetTime(Ts);
 }
 
 void setup()
@@ -240,9 +207,9 @@ void setup()
 
 void loop()
 {
-  Delay_ms(1100);
-  // delay(1100);
+  Delay_ms(1760);
 
-  // PrintTimestamp(GetTime());
-  // Console.Print("Tic");
+  digitalWrite(DebugPin, !digitalRead(DebugPin));
+
+  PrintTimestamp(GetTime());
 }
