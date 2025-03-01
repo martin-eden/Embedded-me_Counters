@@ -2,20 +2,29 @@
 
 /*
   Author: Martin Eden
-  Last mod.: 2025-02-23
+  Last mod.: 2025-03-01
 */
 
 /*
   This is a signal recorder. It timestamps signal changes.
   (Or equivalently, it stores durations of signal levels.)
 
-  What is important is storage capacity, time granularity and range.
+  We're using feature unique to counter 2. It can copy current
+  counter's value to separate variable when signal on event pin
+  changes. Event pin is 8.
+
+  For signal recorded important things are storage capacity,
+  time granularity and range.
 
   Storage capacity is 200 events.
-  Time granularity is 250 kHz.
-  Range is 50 000 granules.
+  Time granularity is 250 kHz (4 us).
+  Range is 50 000 granules. (So event duration can be up to 0.2 s.)
+*/
 
-  ( So event duration can be up to 0.2 s.)
+/*
+  Wiring
+
+    8 Input
 */
 
 #include <me_Counters.h>
@@ -29,7 +38,7 @@
   Signal duration in implementation-specific units of time
 
   We're using magic constant to represent that duration was over
-  the limit we can store.
+  the limit that we can store.
 */
 typedef TUint_2 TDuration;
 
