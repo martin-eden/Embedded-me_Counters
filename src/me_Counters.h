@@ -11,7 +11,7 @@
   Just counters. Ticking with speed proportional to main speed.
 
   ( Yes, main speed is typically fixed to some millions pulses per
-    second. It's even called "clock" an pulses are called "ticks".
+    second. It's even called "clock" and pulses are called "ticks".
   ) Still, by design it's just counters.
 */
 
