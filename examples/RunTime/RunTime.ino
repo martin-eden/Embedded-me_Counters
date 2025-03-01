@@ -1,12 +1,26 @@
-// [me_Counters] test/demo
+// Run-time wallclock using hardware counter
 
 /*
-  That's a test sketch where I'm experimenting.
+  Idea is to tune hardware counter as timer ticking every millisecond.
+  Every millisecond interrupt occurs.
+
+  In interrupt handler we're updating "run time" which is number of
+  seconds and number of milliseconds.
+
+  Time wraps around at 1000 seconds. Of course it can be extended
+  to support longer run times but we had no practical need for this.
+
+  So time granularity is 1 ms. It can be extended to 1/250 ms (4 us)
+  but again, no practical need for that.
+
+  As a demo, we realized delay_ms() function as loop waiting for
+  rich clock time. It has error margin up to 1 ms. For precise
+  milli- and micro-seconds delays one should use tuned busy loops.
 */
 
 /*
   Author: Martin Eden
-  Last mod.: 2025-02-28
+  Last mod.: 2025-03-01
 */
 
 #include <me_Counters.h>
