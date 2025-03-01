@@ -1,6 +1,11 @@
 // Run-time wallclock using hardware counter
 
 /*
+  Author: Martin Eden
+  Last mod.: 2025-03-01
+*/
+
+/*
   Idea is to tune hardware counter as timer ticking every millisecond.
   Every millisecond interrupt occurs.
 
@@ -16,11 +21,6 @@
   As a demo, we realized delay_ms() function as loop waiting for
   rich clock time. It has error margin up to 1 ms. For precise
   milli- and micro-seconds delays one should use tuned busy loops.
-*/
-
-/*
-  Author: Martin Eden
-  Last mod.: 2025-03-01
 */
 
 #include <me_Counters.h>
