@@ -8,6 +8,9 @@
 /*
   This is a signal recorder. It timestamps signal changes.
   (Or equivalently, it stores durations of signal levels.)
+  Parameters are tuned for recording signals from IR receiver.
+
+  Signal durations are printed in microseconds.
 
   We're using feature unique to counter 2. It can copy current
   counter's value to separate variable when signal on event pin
@@ -50,20 +53,42 @@ TDuration Durations[MaxNumDurations];
 
 static TUint_2 NumDurations = 0;
 
-void PrintDuration(
-  TDuration * Duration
+TBool DurationToMicros(
+  TUint_4 * Micros,
+  TDuration Duration
 )
 {
-  if (*Duration == UnknownDuration)
+  const TUint_1 Upscale = 64;
+  const TUint_4 MaxConvertibleDuration = TUint_4_Max / Upscale;
+
+  if (Duration > MaxConvertibleDuration)
+    return false;
+
+  *Micros = (TUint_4) Duration * Upscale;
+
+  return true;
+}
+
+void PrintDuration(
+  TDuration Duration
+)
+{
+  if (Duration == UnknownDuration)
     Console.Write("    ?");
   else
-    Console.Print(*Duration);
+  {
+    TUint_4 Micros;
+    if (DurationToMicros(&Micros, Duration))
+      Console.Print(Micros);
+    else
+      Console.Write("    *");
+  }
 }
 
 void PrintDurations()
 {
   for (TUint_2 Index = 0; Index < NumDurations; ++Index)
-    PrintDuration(&Durations[Index]);
+    PrintDuration(Durations[Index]);
 
   Console.EndLine();
 }
@@ -131,7 +156,7 @@ void SetupCapturingCounter()
 
   CapturingCounter.SetAlgorithm(TAlgorithm_Counter2::Count_To2Pow16);
   CapturingCounter.Control->DriveSource =
-    (TUint_1) TDriveSource_Counter2::Internal_SlowBy2Pow6;
+    (TUint_1) TDriveSource_Counter2::Internal_SlowBy2Pow10;
   CapturingCounter.Control->EventIsOnUpbeat = false;
   CapturingCounter.Wiring->EnableEventInterrupt = true;
   *CapturingCounter.Current = 0;
