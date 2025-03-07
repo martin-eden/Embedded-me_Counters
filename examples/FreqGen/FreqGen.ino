@@ -15,6 +15,12 @@
   you need to slowdown counter.
 */
 
+/*
+  Wiring
+
+    11 Output
+*/
+
 #include <me_BaseTypes.h>
 #include <me_Uart.h>
 #include <me_Console.h>
