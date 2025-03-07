@@ -1,8 +1,8 @@
-// Digital signal recorder
+// Digital signal recorder/replayer
 
 /*
   Author: Martin Eden
-  Last mod.: 2025-03-01
+  Last mod.: 2025-03-07
 */
 
 /*
@@ -17,78 +17,91 @@
   changes. Event pin is 8.
 
   For signal recorded important things are storage capacity,
-  time granularity and range.
+  time granularity and duration span.
 
-  Storage capacity is 200 events.
-  Time granularity is 250 kHz (4 us).
-  Range is 50 000 granules. (So event duration can be up to 0.2 s.)
+  Storage capacity is 150 events.
+  Time granularity is 2 MHz (0.5 us).
+  Duration span ~ 11 days.
 */
 
 /*
   Wiring
 
     8 Input
+    11 Output
 */
 
 #include <me_Counters.h>
+#include <me_Timestamp.h>
+#include <me_RunTime.h>
 
 #include <me_BaseTypes.h>
 #include <me_Uart.h>
 #include <me_Console.h>
 #include <me_Menu.h>
 
-/*
-  Signal duration in implementation-specific units of time
+const TUint_1
+  InputPin = 8,
+  OutputPin = 3;
 
-  We're using magic constant to represent that duration was over
-  the limit that we can store.
-*/
-typedef TUint_2 TDuration;
+typedef me_Timestamp::TTimestamp TDuration;
 
-const TDuration MaxDuration = 50000;
-const TDuration UnknownDuration = TUint_2_Max;
+const TDuration UnknownDuration = { 0, 0, 0, 0 };
 
-const TUint_2 MaxNumDurations = 200;
+const TUint_2 MaxNumDurations = 150;
 TDuration Durations[MaxNumDurations];
 
-static TUint_2 NumDurations = 0;
+TDuration LastEvent = UnknownDuration;
 
-TBool DurationToMicros(
-  TUint_4 * Micros,
-  TDuration Duration
-)
-{
-  const TUint_1 Upscale = 64;
-  const TUint_4 MaxConvertibleDuration = TUint_4_Max / Upscale;
-
-  if (Duration > MaxConvertibleDuration)
-    return false;
-
-  *Micros = (TUint_4) Duration * Upscale;
-
-  return true;
-}
+TUint_2 NumDurations = 0;
 
 void PrintDuration(
   TDuration Duration
 )
 {
-  if (Duration == UnknownDuration)
-    Console.Write("    ?");
-  else
-  {
-    TUint_4 Micros;
-    if (DurationToMicros(&Micros, Duration))
-      Console.Print(Micros);
-    else
-      Console.Write("    *");
-  }
+  Console.Write("Duration");
+  Console.Write("(");
+
+  TBool IsStarted;
+
+  IsStarted = false;
+
+  if (Duration.KiloS != 0)
+    IsStarted = true;
+
+  if (IsStarted)
+    Console.Print(Duration.KiloS);
+
+  if (Duration.S != 0)
+    IsStarted = true;
+
+  if (IsStarted)
+    Console.Print(Duration.S);
+
+  if (Duration.MilliS != 0)
+    IsStarted = true;
+
+  if (IsStarted)
+    Console.Print(Duration.MilliS);
+
+  if (Duration.MicroS != 0)
+    IsStarted = true;
+
+  if (IsStarted)
+    Console.Print(Duration.MicroS);
+
+  Console.Write(")");
+  Console.EndLine();
 }
 
 void PrintDurations()
 {
+  Console.Print("(");
+
   for (TUint_2 Index = 0; Index < NumDurations; ++Index)
     PrintDuration(Durations[Index]);
+
+  Console.Print(")");
 
   Console.EndLine();
 }
@@ -99,6 +112,8 @@ void ClearDurations()
     Durations[Index] = UnknownDuration;
 
   NumDurations = 0;
+
+  LastEvent = UnknownDuration;
 }
 
 TBool AddDuration(
@@ -115,51 +130,233 @@ TBool AddDuration(
   return true;
 }
 
-extern "C" void __vector_10() __attribute__((interrupt, used));
+extern "C" void __vector_10() __attribute__((interrupt, used)); // (1)
+
+/*
+  [1]: "interrupt" attribute means that interrupts are _enabled_ at
+    start of handler. That's actually desired and important:
+    we're using GetTime() which gets timestamp that updated by
+    another interrupt routine.
+
+    When using "signal" attribute that don't enables interrupts
+    we got conditions that our "vector 10" is executed before
+    "vector 11" used for updating timestamp.
+
+    In that case time update is pending, we're using old time
+    (but with right amount of microseconds) and we're getting
+    negative difference from last time.
+*/
 
 // Interrupt 10 is for counter 2 capture event
 void __vector_10()
 {
-  me_Counters::TCounter2 CapturingCounter;
-
-  TDuration Duration;
-
-  if (CapturingCounter.Status->Done)
+  // Set counter to capture opposite side of signal edge
   {
-    Duration = UnknownDuration;
+    me_Counters::TCounter2 CapturingCounter;
 
-    CapturingCounter.Status->Done = true; // Yep, cleared by writing one
-  }
-  else
-  {
-    TUint_2 EventMark = *CapturingCounter.EventMark;
-
-    if (EventMark > MaxDuration)
-      Duration = UnknownDuration;
-    else
-      Duration = EventMark;
+    CapturingCounter.Control->EventIsOnUpbeat =
+      !CapturingCounter.Control->EventIsOnUpbeat;
   }
 
-  AddDuration(&Duration);
+  // Add duration since last event to array
+  {
+    using
+      me_RunTime::GetTime,
+      me_Timestamp::Subtract,
+      me_Timestamp::Add;
 
-  *CapturingCounter.Current = 0;
+    TDuration CurTime, Duration;
 
-  CapturingCounter.Control->EventIsOnUpbeat =
-    !CapturingCounter.Control->EventIsOnUpbeat;
+    CurTime = GetTime();
+
+    Duration = CurTime;
+
+    // (1)
+    if (!Subtract(&Duration, LastEvent))
+    {
+      const TDuration MilliS = { 0, 0, 1, 0 };
+      Add(&Duration, MilliS);
+    }
+
+    AddDuration(&Duration);
+
+    LastEvent = CurTime;
+  }
+
+  /*
+    [1]: Still horrible workaround for negative time difference case
+
+      GetTime() lives on timer 2. Our event lives on timer 2.
+      "Event" interrupt from timer 2 has higher priority than
+      "Mark" interrupt of timer 2. Microseconds part from GetTime()
+      is always correct.
+
+      Imagine the time period is year. We're updating year number
+      after detecting "New year" event. Also we have "received parcel"
+      event with higher priority.
+
+      So it's like January 3rd, we coming to get parcel. Last parcel was
+      December 30th year 2024. We asking for GetTime() to get full date
+      for time delta calculation. And returned date is 2024-01-03.
+      Because year number was not updated yet.
+
+      That's what happening for microseconds and milliseconds.
+
+      Workaround is bad because it must know how time is updated and
+      it does same job for it's own variable. But we see no other
+      practical solution.
+  */
 }
 
-void SetupCapturingCounter()
+void StartRecording()
+{
+  me_Counters::TCounter2 CaptiveCounter;
+
+  CaptiveCounter.Control->EventIsOnUpbeat = false;
+  CaptiveCounter.Interrupts->OnEvent = true;
+}
+
+void StopRecording()
+{
+  me_Counters::TCounter2 CaptiveCounter;
+
+  CaptiveCounter.Interrupts->OnEvent = false;
+  CaptiveCounter.Status->GotEventMark = true; // yep, cleared by one
+}
+
+void SetupRecorder()
+{
+  StartRecording();
+  StopRecording();
+}
+
+void SetupFreqGen()
+{
+  pinMode(OutputPin, OUTPUT);
+
+  TUint_4 DesiredFreq_Hz = 38000;
+  TUint_1 WaveDuration_Ut = (TUint_4) F_CPU / DesiredFreq_Hz / 8;
+
+  using namespace me_Counters;
+
+  TCounter3 Counter;
+
+  StopFreqGen();
+
+  Counter.SetAlgorithm(TAlgorithm_Counter3::FastPwm_ToMarkA);
+
+  *Counter.MarkA = WaveDuration_Ut - 1;
+  Counter.Control->PinActionOnMarkA = (TUint_1) TPinAction::None;
+
+  *Counter.MarkB = *Counter.MarkA / 2;
+  Counter.Control->PinActionOnMarkB = (TUint_1) TPinAction::Set;
+}
+
+void StartFreqGen()
 {
   using namespace me_Counters;
 
-  TCounter2 CapturingCounter;
+  TCounter3 Counter;
 
-  CapturingCounter.SetAlgorithm(TAlgorithm_Counter2::Count_To2Pow16);
-  CapturingCounter.Control->DriveSource =
-    (TUint_1) TDriveSource_Counter2::Internal_SlowBy2Pow10;
-  CapturingCounter.Control->EventIsOnUpbeat = false;
-  CapturingCounter.Wiring->EnableEventInterrupt = true;
-  *CapturingCounter.Current = 0;
+  *Counter.Current = 0;
+  Counter.Control->Speed = (TUint_1) TSpeed_Counter3::SlowBy2Pow3;
+}
+
+void StopFreqGen()
+{
+  const TUint_1 CounterStoppingMargin = 10;
+
+  using namespace me_Counters;
+
+  TCounter3 Counter;
+
+  if (Counter.Control->Speed != (TUint_1) TSpeed_Counter3::None)
+    while (*Counter.Current > CounterStoppingMargin);
+
+  Counter.Control->Speed = (TUint_1) TSpeed_Counter3::None;
+  *Counter.Current = 0;
+}
+
+void ReplayDurations()
+{
+  Console.Print("(");
+
+  // First duration contains time from system start. So we'll ignore it
+  TUint_2 Index = 1;
+
+  while (true)
+  {
+    {
+      if (Index >= NumDurations)
+        break;
+
+      TDuration Duration = Durations[Index];
+
+      {
+        const TDuration EmitOverhead = { 0, 0, 0, 47 };
+        const TDuration Zero = { 0, 0, 0, 0 };
+
+        if (me_Timestamp::Compare(Duration, EmitOverhead) <= 0)
+          Duration = Zero;
+        else
+          me_Timestamp::Subtract(&Duration, EmitOverhead);
+      }
+
+      // PrintDuration(Duration);
+
+      StartFreqGen();
+
+      me_RunTime::Delay(Duration);
+
+      StopFreqGen();
+
+      ++Index;
+    }
+    {
+      if (Index >= NumDurations)
+        break;
+
+      TDuration Duration = Durations[Index];
+
+      // PrintDuration(Duration);
+
+      {
+        const TDuration DelayOverhead = { 0, 0, 0, 57 };
+        const TDuration Zero = { 0, 0, 0, 0 };
+
+        if (me_Timestamp::Compare(Duration, DelayOverhead) <= 0)
+          Duration = Zero;
+        else
+          me_Timestamp::Subtract(&Duration, DelayOverhead);
+      }
+
+      me_RunTime::Delay(Duration);
+
+      ++Index;
+    }
+  }
+
+  Console.Print(")");
+}
+
+void TestEmitter()
+{
+  TDuration Duration;
+  ClearDurations();
+
+  Duration = { 0, 0, 2, 0 };
+  AddDuration(&Duration);
+
+  Duration = { 0, 0, 1, 0 };
+  AddDuration(&Duration);
+
+  Duration = { 0, 0, 0, 500 };
+  AddDuration(&Duration);
+
+  Duration = { 0, 0, 1, 0 };
+  AddDuration(&Duration);
+
+  ReplayDurations();
 }
 
 void ClearDurations_Handler(
@@ -178,6 +375,38 @@ void PrintDurations_Handler(
   PrintDurations();
 }
 
+void StartRecording_Handler(
+  TUint_2 Data [[gnu::unused]],
+  TUint_2 Instance [[gnu::unused]]
+)
+{
+  StartRecording();
+}
+
+void StopRecording_Handler(
+  TUint_2 Data [[gnu::unused]],
+  TUint_2 Instance [[gnu::unused]]
+)
+{
+  StopRecording();
+}
+
+void Replay_Handler(
+  TUint_2 Data [[gnu::unused]],
+  TUint_2 Instance [[gnu::unused]]
+)
+{
+  ReplayDurations();
+}
+
+void TestEmitter_Handler(
+  TUint_2 Data [[gnu::unused]],
+  TUint_2 Instance [[gnu::unused]]
+)
+{
+  TestEmitter();
+}
+
 void AddMenuItems(
   me_Menu::TMenu * Menu
 )
@@ -189,18 +418,27 @@ void AddMenuItems(
 
   Menu->AddItem(ToItem("p", "Print captured durations", PrintDurations_Handler, UnusedAddr));
   Menu->AddItem(ToItem("c", "Clear data", ClearDurations_Handler, UnusedAddr));
+
+  Menu->AddItem(ToItem("b", "Begin recording", StartRecording_Handler, UnusedAddr));
+  Menu->AddItem(ToItem("e", "End recording", StopRecording_Handler, UnusedAddr));
+
+  Menu->AddItem(ToItem("r", "Replay captured signal", Replay_Handler, UnusedAddr));
+  Menu->AddItem(ToItem("t", "Test emitter", TestEmitter_Handler, UnusedAddr));
 }
 
 void setup()
 {
+  me_Uart::Init(me_Uart::Speed_115k_Bps);
 
-  me_Uart::Init(me_Uart::Speed_1M_Bps);
+  me_RunTime::Setup();
 
-  SetupCapturingCounter();
+  SetupRecorder();
+
+  SetupFreqGen();
 
   ClearDurations();
 
-  Console.Print("Init done");
+  Console.Print("Init done.");
 
   {
     me_Menu::TMenu Menu;
@@ -213,7 +451,7 @@ void setup()
     Menu.Run();
   }
 
-  Console.Print("Done");
+  Console.Print("Done.");
 }
 
 void loop()
@@ -221,7 +459,8 @@ void loop()
 }
 
 /*
-  2025-01-09
-  2025-01-28
-  2025-02-23
+  2025-01 # #
+  2025-02 #
+  2025-03 # # #
+  2025-03-07
 */
