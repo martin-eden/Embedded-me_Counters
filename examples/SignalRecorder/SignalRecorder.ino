@@ -2,7 +2,7 @@
 
 /*
   Author: Martin Eden
-  Last mod.: 2025-03-07
+  Last mod.: 2025-03-17
 */
 
 /*
@@ -19,7 +19,7 @@
   For signal recorded important things are storage capacity,
   time granularity and duration span.
 
-  Storage capacity is 150 events.
+  Storage capacity is 120 events.
   Time granularity is 2 MHz (0.5 us).
   Duration span ~ 11 days.
 */
@@ -48,7 +48,7 @@ typedef me_Timestamp::TTimestamp TDuration;
 
 const TDuration UnknownDuration = { 0, 0, 0, 0 };
 
-const TUint_2 MaxNumDurations = 150;
+const TUint_2 MaxNumDurations = 120;
 TDuration Durations[MaxNumDurations];
 
 TDuration LastEvent = UnknownDuration;
@@ -59,7 +59,6 @@ void PrintDuration(
   TDuration Duration
 )
 {
-  Console.Write("Duration");
   Console.Write("(");
 
   TBool IsStarted;
@@ -279,8 +278,6 @@ void StopFreqGen()
 
 void ReplayDurations()
 {
-  Console.Print("(");
-
   // First duration contains time from system start. So we'll ignore it
   TUint_2 Index = 1;
 
@@ -335,8 +332,6 @@ void ReplayDurations()
       ++Index;
     }
   }
-
-  Console.Print(")");
 }
 
 void TestEmitter()
@@ -463,4 +458,5 @@ void loop()
   2025-02 #
   2025-03 # # #
   2025-03-07
+  2025-03-17
 */
