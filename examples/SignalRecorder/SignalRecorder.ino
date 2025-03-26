@@ -2,7 +2,7 @@
 
 /*
   Author: Martin Eden
-  Last mod.: 2025-03-17
+  Last mod.: 2025-03-24
 */
 
 /*
@@ -433,7 +433,7 @@ void setup()
 
   ClearDurations();
 
-  Console.Print("Init done.");
+  Console.Print("IR signal player/recorder.");
 
   {
     me_Menu::TMenu Menu;
