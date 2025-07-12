@@ -2,8 +2,7 @@
 
 /*
   Author: Martin Eden
-  Last mod.: 2025-03-24
-*/
+  Last mod.: 2025-07-12
 
 /*
   This is a signal recorder. It timestamps signal changes.
@@ -409,16 +408,17 @@ void AddMenuItems(
   using
     me_Menu::Freetown::ToItem;
 
-  TUint_2 UnusedAddr = 0;
+  TUint_2 Unused = 0;
 
-  Menu->AddItem(ToItem("p", "Print captured durations", PrintDurations_Handler, UnusedAddr));
-  Menu->AddItem(ToItem("c", "Clear data", ClearDurations_Handler, UnusedAddr));
+  Menu->AddItem(ToItem("b", "Begin recording", StartRecording_Handler, Unused));
+  Menu->AddItem(ToItem("e", "End recording", StopRecording_Handler, Unused));
 
-  Menu->AddItem(ToItem("b", "Begin recording", StartRecording_Handler, UnusedAddr));
-  Menu->AddItem(ToItem("e", "End recording", StopRecording_Handler, UnusedAddr));
+  Menu->AddItem(ToItem("p", "Print captured data", PrintDurations_Handler, Unused));
+  Menu->AddItem(ToItem("c", "Clear data", ClearDurations_Handler, Unused));
 
-  Menu->AddItem(ToItem("r", "Replay captured signal", Replay_Handler, UnusedAddr));
-  Menu->AddItem(ToItem("t", "Test emitter", TestEmitter_Handler, UnusedAddr));
+  Menu->AddItem(ToItem("r", "Replay captured data", Replay_Handler, Unused));
+
+  Menu->AddItem(ToItem("t", "Test emitter (overwrite recording and replay)", TestEmitter_Handler, Unused));
 }
 
 void setup()
