@@ -1,11 +1,11 @@
 # What
 
-(2024-12/2025-02 ...)
+(2024-12/2025-03)
 
 Interface to ATmega328/P counters (aka timers).
 
 All code I've seen for working with counters are unreadable with
-names like TCCR1B. This implementation is uses none of them.
+names like TCCR1B. This implementation uses none of them.
 
 Counters are just hardware circuits running along with main code
 and using hardcoded memory locations for input/output.
@@ -27,7 +27,7 @@ We want to thank C++ for bitfields.
 ## Install/remove
 
 This is low-level library which depends only of "me_BaseTypes".
-However examples depend on my other libraries. To save us time
+However examples depend on my other libraries. To save our time
 I would advise to clone [GetLibs][GetLibs] repo and run it's code
 to get all my stuff.
 
