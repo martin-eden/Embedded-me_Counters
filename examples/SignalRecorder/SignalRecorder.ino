@@ -2,7 +2,8 @@
 
 /*
   Author: Martin Eden
-  Last mod.: 2025-07-12
+  Last mod.: 2025-08-01
+*/
 
 /*
   This is a signal recorder. It timestamps signal changes.
@@ -19,7 +20,7 @@
   time granularity and duration span.
 
   Storage capacity is 120 events.
-  Time granularity is 2 MHz (0.5 us).
+  Time granularity is 0.5 us (2 MHz).
   Duration span ~ 11 days.
 */
 
@@ -292,7 +293,7 @@ void ReplayDurations()
         const TDuration EmitOverhead = { 0, 0, 0, 47 };
         const TDuration Zero = { 0, 0, 0, 0 };
 
-        if (me_Timestamp::Compare(Duration, EmitOverhead) <= 0)
+        if (me_Timestamp::IsLessOrEqual(Duration, EmitOverhead))
           Duration = Zero;
         else
           me_Timestamp::Subtract(&Duration, EmitOverhead);
@@ -320,7 +321,7 @@ void ReplayDurations()
         const TDuration DelayOverhead = { 0, 0, 0, 57 };
         const TDuration Zero = { 0, 0, 0, 0 };
 
-        if (me_Timestamp::Compare(Duration, DelayOverhead) <= 0)
+        if (me_Timestamp::IsLessOrEqual(Duration, DelayOverhead))
           Duration = Zero;
         else
           me_Timestamp::Subtract(&Duration, DelayOverhead);
