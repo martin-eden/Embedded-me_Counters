@@ -2,7 +2,7 @@
 
 /*
   Author: Martin Eden
-  Last mod.: 2025-08-01
+  Last mod.: 2025-09-12
 */
 
 /*
@@ -16,9 +16,6 @@
   counter's value to separate variable when signal on event pin
   changes. Event pin is 8.
 
-  For signal recorded important things are storage capacity,
-  time granularity and duration span.
-
   Storage capacity is 120 events.
   Time granularity is 0.5 us (2 MHz).
   Duration span ~ 11 days.
@@ -28,17 +25,20 @@
   Wiring
 
     8 Input
-    11 Output
+    3 Output
 */
 
 #include <me_Counters.h>
-#include <me_Timestamp.h>
-#include <me_RunTime.h>
 
 #include <me_BaseTypes.h>
-#include <me_Uart.h>
-#include <me_Console.h>
+
+#include <me_Timestamp.h>
+#include <me_RunTime.h>
+#include <me_Delays.h>
+
 #include <me_Menu.h>
+#include <me_Console.h>
+#include <me_DebugPrints.h>
 
 const TUint_1
   InputPin = 8,
@@ -55,50 +55,12 @@ TDuration LastEvent = UnknownDuration;
 
 TUint_2 NumDurations = 0;
 
-void PrintDuration(
-  TDuration Duration
-)
-{
-  Console.Write("(");
-
-  TBool IsStarted;
-
-  IsStarted = false;
-
-  if (Duration.KiloS != 0)
-    IsStarted = true;
-
-  if (IsStarted)
-    Console.Print(Duration.KiloS);
-
-  if (Duration.S != 0)
-    IsStarted = true;
-
-  if (IsStarted)
-    Console.Print(Duration.S);
-
-  if (Duration.MilliS != 0)
-    IsStarted = true;
-
-  if (IsStarted)
-    Console.Print(Duration.MilliS);
-
-  if (Duration.MicroS != 0)
-    IsStarted = true;
-
-  if (IsStarted)
-    Console.Print(Duration.MicroS);
-
-  Console.Write(")");
-  Console.EndLine();
-}
-
 void PrintDurations()
 {
   Console.Print("(");
 
   for (TUint_2 Index = 0; Index < NumDurations; ++Index)
-    PrintDuration(Durations[Index]);
+    me_DebugPrints::PrintDuration(Durations[Index]);
 
   Console.Print(")");
 
@@ -116,7 +78,7 @@ void ClearDurations()
 }
 
 TBool AddDuration(
-  TDuration * Duration
+  TDuration Duration
 )
 {
   if (NumDurations == MaxNumDurations)
@@ -124,7 +86,7 @@ TBool AddDuration(
 
   ++NumDurations;
 
-  Durations[NumDurations - 1] = *Duration;
+  Durations[NumDurations - 1] = Duration;
 
   return true;
 }
@@ -146,10 +108,10 @@ extern "C" void __vector_10() __attribute__((interrupt, used)); // (1)
     negative difference from last time.
 */
 
-// Interrupt 10 is for counter 2 capture event
+// Interrupt 10 is for counter 2 capture event, pin 8
 void __vector_10()
 {
-  // Set counter to capture opposite side of signal edge
+  // Trigger next capture at opposite side of signal edge
   {
     me_Counters::TCounter2 CapturingCounter;
 
@@ -157,59 +119,15 @@ void __vector_10()
       !CapturingCounter.Control->EventIsOnUpbeat;
   }
 
-  // Add duration since last event to array
-  {
-    using
-      me_RunTime::GetTime,
-      me_Timestamp::Subtract,
-      me_Timestamp::Add;
-
-    TDuration CurTime, Duration;
-
-    CurTime = GetTime();
-
-    Duration = CurTime;
-
-    // (1)
-    if (!Subtract(&Duration, LastEvent))
-    {
-      const TDuration MilliS = { 0, 0, 1, 0 };
-      Add(&Duration, MilliS);
-    }
-
-    AddDuration(&Duration);
-
-    LastEvent = CurTime;
-  }
-
-  /*
-    [1]: Still horrible workaround for negative time difference case
-
-      GetTime() lives on timer 2. Our event lives on timer 2.
-      "Event" interrupt from timer 2 has higher priority than
-      "Mark" interrupt of timer 2. Microseconds part from GetTime()
-      is always correct.
-
-      Imagine the time period is year. We're updating year number
-      after detecting "New year" event. Also we have "received parcel"
-      event with higher priority.
-
-      So it's like January 3rd, we coming to get parcel. Last parcel was
-      December 30th year 2024. We asking for GetTime() to get full date
-      for time delta calculation. And returned date is 2024-01-03.
-      Because year number was not updated yet.
-
-      That's what happening for microseconds and milliseconds.
-
-      Workaround is bad because it must know how time is updated and
-      it does same job for it's own variable. But we see no other
-      practical solution.
-  */
+  // Add current time to array, we'll process it at printing
+  AddDuration(me_RunTime::GetTime());
 }
 
 void StartRecording()
 {
   me_Counters::TCounter2 CaptiveCounter;
+
+  me_RunTime::Start();
 
   CaptiveCounter.Control->EventIsOnUpbeat = false;
   CaptiveCounter.Interrupts->OnEvent = true;
@@ -221,6 +139,8 @@ void StopRecording()
 
   CaptiveCounter.Interrupts->OnEvent = false;
   CaptiveCounter.Status->GotEventMark = true; // yep, cleared by one
+
+  me_RunTime::Stop();
 }
 
 void SetupRecorder()
@@ -242,12 +162,15 @@ void SetupFreqGen()
 
   StopFreqGen();
 
+  if (WaveDuration_Ut < 2)
+    return;
+
   Counter.SetAlgorithm(TAlgorithm_Counter3::FastPwm_ToMarkA);
 
   *Counter.MarkA = WaveDuration_Ut - 1;
   Counter.Control->PinActionOnMarkA = (TUint_1) TPinAction::None;
 
-  *Counter.MarkB = *Counter.MarkA / 2;
+  *Counter.MarkB = (WaveDuration_Ut - 1) / 2;
   Counter.Control->PinActionOnMarkB = (TUint_1) TPinAction::Set;
 }
 
@@ -257,8 +180,8 @@ void StartFreqGen()
 
   TCounter3 Counter;
 
-  *Counter.Current = 0;
   Counter.Control->Speed = (TUint_1) TSpeed_Counter3::SlowBy2Pow3;
+  *Counter.Current = 0;
 }
 
 void StopFreqGen()
@@ -269,6 +192,7 @@ void StopFreqGen()
 
   TCounter3 Counter;
 
+  // If we're not stopped finish wave cycle
   if (Counter.Control->Speed != (TUint_1) TSpeed_Counter3::None)
     while (*Counter.Current > CounterStoppingMargin);
 
@@ -278,56 +202,45 @@ void StopFreqGen()
 
 void ReplayDurations()
 {
+  const TDuration Zero = { 0, 0, 0, 0 };
+  const TDuration EmitOverhead = { 0, 0, 0, 176 };
+  const TDuration DelayOverhead = { 0, 0, 0, 232 };
+  TUint_2 Index;
+  TDuration Duration;
+
   // First duration contains time from system start. So we'll ignore it
-  TUint_2 Index = 1;
+  Index = 1;
 
   while (true)
   {
+    if (Index >= NumDurations)
+      break;
+
+    Duration = Durations[Index];
+
+    // Emit wave
     {
-      if (Index >= NumDurations)
-        break;
-
-      TDuration Duration = Durations[Index];
-
-      {
-        const TDuration EmitOverhead = { 0, 0, 0, 47 };
-        const TDuration Zero = { 0, 0, 0, 0 };
-
-        if (me_Timestamp::IsLessOrEqual(Duration, EmitOverhead))
-          Duration = Zero;
-        else
-          me_Timestamp::Subtract(&Duration, EmitOverhead);
-      }
-
-      // PrintDuration(Duration);
+      if (!me_Timestamp::Subtract(&Duration, EmitOverhead))
+        Duration = Zero;
 
       StartFreqGen();
-
-      me_RunTime::Delay(Duration);
-
+      me_Delays::Delay_Duration(Duration);
       StopFreqGen();
 
       ++Index;
     }
+
+    if (Index >= NumDurations)
+      break;
+
+    Duration = Durations[Index];
+
+    // Sleep
     {
-      if (Index >= NumDurations)
-        break;
+      if (!me_Timestamp::Subtract(&Duration, DelayOverhead))
+        Duration = Zero;
 
-      TDuration Duration = Durations[Index];
-
-      // PrintDuration(Duration);
-
-      {
-        const TDuration DelayOverhead = { 0, 0, 0, 57 };
-        const TDuration Zero = { 0, 0, 0, 0 };
-
-        if (me_Timestamp::IsLessOrEqual(Duration, DelayOverhead))
-          Duration = Zero;
-        else
-          me_Timestamp::Subtract(&Duration, DelayOverhead);
-      }
-
-      me_RunTime::Delay(Duration);
+      me_Delays::Delay_Duration(Duration);
 
       ++Index;
     }
@@ -336,20 +249,12 @@ void ReplayDurations()
 
 void TestEmitter()
 {
-  TDuration Duration;
   ClearDurations();
 
-  Duration = { 0, 0, 2, 0 };
-  AddDuration(&Duration);
-
-  Duration = { 0, 0, 1, 0 };
-  AddDuration(&Duration);
-
-  Duration = { 0, 0, 0, 500 };
-  AddDuration(&Duration);
-
-  Duration = { 0, 0, 1, 0 };
-  AddDuration(&Duration);
+  AddDuration({ 0, 0, 2, 0 });
+  AddDuration({ 0, 0, 1, 0 });
+  AddDuration({ 0, 0, 1, 0 });
+  AddDuration({ 0, 0, 2, 0 });
 
   ReplayDurations();
 }
@@ -424,9 +329,7 @@ void AddMenuItems(
 
 void setup()
 {
-  me_Uart::Init(me_Uart::Speed_115k_Bps);
-
-  me_RunTime::Setup();
+  Console.Init();
 
   SetupRecorder();
 
@@ -454,10 +357,55 @@ void loop()
 {
 }
 
+  /*
+  // Add duration since last event to array
+  {
+    TDuration CurTime, Duration;
+
+    CurTime = me_RunTime::GetTime();
+
+    Duration = CurTime;
+
+    // (1)
+    if (!me_Timestamp::Subtract(&Duration, LastEvent))
+    {
+      const TDuration MilliS = { 0, 0, 1, 0 };
+      me_Timestamp::Add(&Duration, MilliS);
+    }
+
+    AddDuration(&Duration);
+
+    LastEvent = CurTime;
+  }
+  */
+
+  /*
+    [1]: Still horrible workaround for negative time difference case
+
+      GetTime() lives on timer 2. Our event lives on timer 2.
+      "Event" interrupt from timer 2 has higher priority than
+      "Mark" interrupt of timer 2. Microseconds part from GetTime()
+      is always correct.
+
+      Imagine the time period is year. We're updating year number
+      after detecting "New year" event. Also we have "received parcel"
+      event with higher priority.
+
+      So it's like January 3rd, we coming to get parcel. Last parcel was
+      December 30th year 2024. We asking for GetTime() to get full date
+      for time delta calculation. And returned date is 2024-01-03.
+      Because year number was not updated yet.
+
+      That's what happening for microseconds and milliseconds.
+
+      Workaround is bad because it must know how time is updated and
+      it does same job for it's own variable. But we see no other
+      practical solution.
+  */
+
 /*
   2025-01 # #
   2025-02 #
-  2025-03 # # #
-  2025-03-07
-  2025-03-17
+  2025-03 # # # # #
+  2025-09-12
 */
