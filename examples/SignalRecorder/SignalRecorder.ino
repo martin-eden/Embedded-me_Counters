@@ -97,9 +97,9 @@ extern "C" void __vector_10() __attribute__((interrupt, used)); // (1)
   [1]: "interrupt" attribute means that interrupts are _enabled_ at
     start of handler. That's actually desired and important:
     we're using GetTime() which gets timestamp that updated by
-    another interrupt routine.
+    another interrupt routine with lower priority.
 
-    When using "signal" attribute that don't enables interrupts
+    When using "signal" attribute that don't enable interrupts
     we got conditions that our "vector 10" is executed before
     "vector 11" used for updating timestamp.
 
@@ -316,15 +316,32 @@ void AddMenuItems(
 
   TUint_2 Unused = 0;
 
-  Menu->AddItem(ToItem("b", "Begin recording", StartRecording_Handler, Unused));
-  Menu->AddItem(ToItem("e", "End recording", StopRecording_Handler, Unused));
+  Menu->AddItem(
+    ToItem("b", "Begin recording", StartRecording_Handler, Unused)
+  );
+  Menu->AddItem(
+    ToItem("e", "End recording", StopRecording_Handler, Unused)
+  );
 
-  Menu->AddItem(ToItem("p", "Print captured data", PrintDurations_Handler, Unused));
-  Menu->AddItem(ToItem("c", "Clear data", ClearDurations_Handler, Unused));
+  Menu->AddItem(
+    ToItem("p", "Print captured data", PrintDurations_Handler, Unused)
+  );
+  Menu->AddItem(
+    ToItem("c", "Clear data", ClearDurations_Handler, Unused)
+  );
 
-  Menu->AddItem(ToItem("r", "Replay captured data", Replay_Handler, Unused));
+  Menu->AddItem(
+    ToItem("r", "Replay captured data", Replay_Handler, Unused)
+  );
 
-  Menu->AddItem(ToItem("t", "Test emitter (overwrite recording and replay)", TestEmitter_Handler, Unused));
+  Menu->AddItem(
+    ToItem(
+      "t",
+      "Test emitter (overwrite recording and replay)",
+      TestEmitter_Handler,
+      Unused
+    )
+  );
 }
 
 void setup()
