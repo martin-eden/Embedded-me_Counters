@@ -60,7 +60,10 @@ void PrintDurations()
   Console.Print("(");
 
   for (TUint_2 Index = 0; Index < NumDurations; ++Index)
+  {
     me_DebugPrints::PrintDuration(Durations[Index]);
+    Console.EndLine();
+  }
 
   Console.Print(")");
 
