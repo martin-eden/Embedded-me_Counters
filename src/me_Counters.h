@@ -2,7 +2,7 @@
 
 /*
   Author: Martin Eden
-  Last mod.: 2025-03-04
+  Last mod.: 2025-10-10
 */
 
 /*
@@ -20,22 +20,18 @@
 
   Counter concept
 
-    Input (Alive, N, MarkA, MarkB)
-    Output (MarkAEvent, MarkBEvent, ReachedEndEvent)
-    Logic (
-      while Alive
-        for i = 1, N
-          Sleep()
-          if (i == MarkA)
-            MarkAEvent()
-          if (i == MarkB)
-            MarkBEvent()
-        ReachedEndEvent()
-    )
+    // Runs in parallel from main clock source
+    while Alive
+      for i = 1, N
+        Sleep()
+        if (i == MarkA)
+          MarkAEvent()
+        if (i == MarkB)
+          MarkBEvent()
+      ReachedEndEvent()
 
-  This code runs parallel with main code. Events are just setting bits
-  in memory. Hardware magic of that bits allows to call interrupt
-  handler in main code.
+  Events are just setting bits in memory. Hardware magic allows to call
+  interrupt handlers upon touching these bits.
 
   ( There is fancier symmetric loop:
 
@@ -225,8 +221,8 @@ namespace me_Counters
 
     Output pins
 
-      5 MarkB
-      6 MarkA
+      6 Mark A
+      5 Mark B
   */
   struct TCounter1
   {
@@ -245,6 +241,7 @@ namespace me_Counters
     Counter 2
 
     * 16-bit endurance
+    * Wide set of algorithms
     * Can store current value on "event" input pin change.
       Can even count to that value.
 
@@ -255,8 +252,8 @@ namespace me_Counters
 
     Output pins
 
-       9 MarkA
-      10 MarkB
+       9 Mark A
+      10 Mark B
   */
   struct TCounter2
   {
@@ -278,6 +275,7 @@ namespace me_Counters
     * 8-bit endurance
     * Can live from pulses from external oscillator (use case is 32 kiHz
       oscillator). This allows him to stay awake in many sleep modes.
+    * Wide set of main clock downscaling.
 
     Input pins
 
@@ -285,8 +283,8 @@ namespace me_Counters
 
     Output pins
 
-       3 MarkB
-      11 MarkA
+      11 Mark A
+       3 Mark B
   */
   struct TCounter3
   {
