@@ -112,8 +112,8 @@ namespace me_Counters
   {
     None = 0,
     Toggle = 1,
-    Clear = 2,
-    Set = 3,
+    Set = 2,
+    Clear = 3,
   };
 
   // Status
