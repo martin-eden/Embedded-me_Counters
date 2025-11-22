@@ -2,7 +2,7 @@
 
 /*
   Author: Martin Eden
-  Last mod.: 2025-10-26
+  Last mod.: 2025-11-22
 */
 
 /*
@@ -261,7 +261,7 @@ namespace me_Counters
     TInterrupts * Interrupts = (TInterrupts *) 111;
     volatile TBehavior_Counter2 * Control = (TBehavior_Counter2 *) 128;
     volatile TUint_2 * Current = (TUint_2 *) 132;
-    TUint_2 * EventMark = (TUint_2 *) 134;
+    volatile TUint_2 * EventMark = (TUint_2 *) 134;
     TUint_2 * MarkA = (TUint_2 *) 136;
     TUint_2 * MarkB = (TUint_2 *) 138;
 
