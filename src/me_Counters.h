@@ -50,7 +50,7 @@ namespace me_Counters
   enum struct TDriveSource_Counters12
   {
     None = 0,
-    Internal_Fullspeed = 1,
+    Internal_FullSpeed = 1,
     Internal_SlowBy2Pow3 = 2,
     Internal_SlowBy2Pow6 = 3,
     Internal_SlowBy2Pow8 = 4,
