@@ -2,10 +2,13 @@
 
 /*
   Author: Martin Eden
-  Last mod.: 2025-02-21
+  Last mod.: 2025-11-26
 */
 
 #include <me_Counters.h>
+
+#include <me_BaseTypes.h>
+#include <me_HardwareClockScaling.h>
 
 using namespace me_Counters;
 
@@ -50,6 +53,8 @@ TAlgorithm_Counter1 TCounter1::GetAlgorithm()
 
 // ( Counter 2
 
+// ( Algorithm
+
 void TCounter2::SetAlgorithm(
   TAlgorithm_Counter2 Algorithm
 )
@@ -70,6 +75,56 @@ TAlgorithm_Counter2 TCounter2::GetAlgorithm()
 
   return (TAlgorithm_Counter2) AlgoNum;
 }
+
+// )
+
+// Convert slowdown factor to hardware constant
+TBool TCounter2::GetPrescaleConst(
+  TUint_1 * Result,
+  TUint_1 Prescale_PowOfTwo
+)
+{
+  switch (Prescale_PowOfTwo)
+  {
+    default:
+      return false;
+    case 0:
+      *Result = (TUint_1) TDriveSource_Counter2::Internal_FullSpeed;
+      break;
+    case 3:
+      *Result = (TUint_1) TDriveSource_Counter2::Internal_SlowBy2Pow3;
+      break;
+    case 6:
+      *Result = (TUint_1) TDriveSource_Counter2::Internal_SlowBy2Pow6;
+      break;
+    case 8:
+      *Result = (TUint_1) TDriveSource_Counter2::Internal_SlowBy2Pow8;
+      break;
+    case 10:
+      *Result = (TUint_1) TDriveSource_Counter2::Internal_SlowBy2Pow10;
+      break;
+  }
+
+  return true;
+}
+
+// Set speed
+TBool TCounter2::SetSpeed(
+  me_HardwareClockScaling::TClockScale Speed
+)
+{
+  TUint_1 SpeedScale;
+
+  if (!GetPrescaleConst(&SpeedScale, Speed.Prescale_PowOfTwo))
+    return false;
+
+  Control->DriveSource = SpeedScale;
+
+  *MarkA = Speed.CounterLimit;
+
+  return true;
+}
+
 // )
 
 // ( Counter 3
@@ -101,4 +156,5 @@ TAlgorithm_Counter3 TCounter3::GetAlgorithm()
   2025-01-01
   2025-01-09
   2025-02-21
+  2025-11-26
 */

@@ -2,7 +2,7 @@
 
 /*
   Author: Martin Eden
-  Last mod.: 2025-11-22
+  Last mod.: 2025-11-26
 */
 
 /*
@@ -42,6 +42,7 @@
 */
 
 #include <me_BaseTypes.h>
+#include <me_HardwareClockScaling.h>
 
 namespace me_Counters
 {
@@ -267,6 +268,11 @@ namespace me_Counters
 
     void SetAlgorithm(TAlgorithm_Counter2);
     TAlgorithm_Counter2 GetAlgorithm();
+
+    // Convert slowdown factor to hardware constant
+    static TBool GetPrescaleConst(TUint_1 *, TUint_1);
+    // Set prescale and drive source from clock scale record
+    TBool SetSpeed(me_HardwareClockScaling::TClockScale);
   };
 
   /*
@@ -326,4 +332,5 @@ namespace me_Counters
   2025-02-24
   2025-03-04
   2025-10-26
+  2025-11-26
 */
