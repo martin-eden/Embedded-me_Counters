@@ -2,7 +2,7 @@
 
 /*
   Author: Martin Eden
-  Last mod.: 2025-11-26
+  Last mod.: 2025-11-29
 */
 
 /*
@@ -271,8 +271,6 @@ namespace me_Counters
 
     // Convert slowdown factor to hardware constant
     static TBool GetPrescaleConst(TUint_1 *, TUint_1);
-    // Set prescale and drive source from clock scale record
-    TBool SetSpeed(me_HardwareClockScaling::TClockScale);
   };
 
   /*
@@ -333,4 +331,5 @@ namespace me_Counters
   2025-03-04
   2025-10-26
   2025-11-26
+  2025-11-29
 */

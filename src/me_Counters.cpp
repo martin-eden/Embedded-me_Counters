@@ -2,7 +2,7 @@
 
 /*
   Author: Martin Eden
-  Last mod.: 2025-11-26
+  Last mod.: 2025-11-29
 */
 
 #include <me_Counters.h>
@@ -104,23 +104,6 @@ TBool TCounter2::GetPrescaleConst(
       *Result = (TUint_1) TDriveSource_Counter2::Internal_SlowBy2Pow10;
       break;
   }
-
-  return true;
-}
-
-// Set speed
-TBool TCounter2::SetSpeed(
-  me_HardwareClockScaling::TClockScale Speed
-)
-{
-  TUint_1 SpeedScale;
-
-  if (!GetPrescaleConst(&SpeedScale, Speed.Prescale_PowOfTwo))
-    return false;
-
-  Control->DriveSource = SpeedScale;
-
-  *MarkA = Speed.CounterLimit;
 
   return true;
 }
