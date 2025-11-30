@@ -2,7 +2,7 @@
 
 /*
   Author: Martin Eden
-  Last mod.: 2025-11-29
+  Last mod.: 2025-11-30
 */
 
 #include <me_Counters.h>
@@ -78,36 +78,6 @@ TAlgorithm_Counter2 TCounter2::GetAlgorithm()
 
 // )
 
-// Convert slowdown factor to hardware constant
-TBool TCounter2::GetPrescaleConst(
-  TUint_1 * Result,
-  TUint_1 Prescale_PowOfTwo
-)
-{
-  switch (Prescale_PowOfTwo)
-  {
-    default:
-      return false;
-    case 0:
-      *Result = (TUint_1) TDriveSource_Counter2::Internal_FullSpeed;
-      break;
-    case 3:
-      *Result = (TUint_1) TDriveSource_Counter2::Internal_SlowBy2Pow3;
-      break;
-    case 6:
-      *Result = (TUint_1) TDriveSource_Counter2::Internal_SlowBy2Pow6;
-      break;
-    case 8:
-      *Result = (TUint_1) TDriveSource_Counter2::Internal_SlowBy2Pow8;
-      break;
-    case 10:
-      *Result = (TUint_1) TDriveSource_Counter2::Internal_SlowBy2Pow10;
-      break;
-  }
-
-  return true;
-}
-
 // )
 
 // ( Counter 3
@@ -135,9 +105,89 @@ TAlgorithm_Counter3 TCounter3::GetAlgorithm()
 
 // )
 
+// ( Convert slowdown factor to hardware constant
+
+TBool me_Counters::GetPrescaleConst_Counter1(
+  TUint_1 * Result,
+  TUint_1 Prescale_PowOfTwo
+)
+{
+  switch (Prescale_PowOfTwo)
+  {
+    default:
+      return false;
+    case 0:
+      *Result = (TUint_1) TDriveSource_Counter1::Internal_FullSpeed;
+      break;
+    case 3:
+      *Result = (TUint_1) TDriveSource_Counter1::Internal_SlowBy2Pow3;
+      break;
+    case 6:
+      *Result = (TUint_1) TDriveSource_Counter1::Internal_SlowBy2Pow6;
+      break;
+    case 8:
+      *Result = (TUint_1) TDriveSource_Counter1::Internal_SlowBy2Pow8;
+      break;
+    case 10:
+      *Result = (TUint_1) TDriveSource_Counter1::Internal_SlowBy2Pow10;
+      break;
+  }
+
+  return true;
+}
+
+TBool me_Counters::GetPrescaleConst_Counter2(
+  TUint_1 * Result,
+  TUint_1 Prescale_PowOfTwo
+)
+{
+  // Counters 1 and 2 have same prescale options
+  return GetPrescaleConst_Counter1(Result, Prescale_PowOfTwo);
+}
+
+TBool me_Counters::GetPrescaleConst_Counter3(
+  TUint_1 * Result,
+  TUint_1 Prescale_PowOfTwo
+)
+{
+  switch (Prescale_PowOfTwo)
+  {
+    default:
+      return false;
+    case 0:
+      *Result = (TUint_1) TSpeed_Counter3::Full;
+      break;
+    case 3:
+      *Result = (TUint_1) TSpeed_Counter3::SlowBy2Pow3;
+      break;
+    case 5:
+      *Result = (TUint_1) TSpeed_Counter3::SlowBy2Pow5;
+      break;
+    case 6:
+      *Result = (TUint_1) TSpeed_Counter3::SlowBy2Pow6;
+      break;
+    case 7:
+      *Result = (TUint_1) TSpeed_Counter3::SlowBy2Pow7;
+      break;
+    case 8:
+      *Result = (TUint_1) TSpeed_Counter3::SlowBy2Pow8;
+      break;
+    case 10:
+      *Result = (TUint_1) TSpeed_Counter3::SlowBy2Pow10;
+      break;
+  }
+
+  return true;
+}
+
+// )
+
+
+
 /*
   2025-01-01
   2025-01-09
   2025-02-21
   2025-11-26
+  2025-11-30
 */

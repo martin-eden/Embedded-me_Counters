@@ -2,7 +2,7 @@
 
 /*
   Author: Martin Eden
-  Last mod.: 2025-11-29
+  Last mod.: 2025-11-30
 */
 
 /*
@@ -268,9 +268,6 @@ namespace me_Counters
 
     void SetAlgorithm(TAlgorithm_Counter2);
     TAlgorithm_Counter2 GetAlgorithm();
-
-    // Convert slowdown factor to hardware constant
-    static TBool GetPrescaleConst(TUint_1 *, TUint_1);
   };
 
   /*
@@ -319,6 +316,11 @@ namespace me_Counters
     void Start();
     void Stop();
   };
+
+  // Convert slowdown factor to hardware constant
+  TBool GetPrescaleConst_Counter1(TUint_1 * Value, TUint_1 Prescale_PowOfTwo);
+  TBool GetPrescaleConst_Counter2(TUint_1 * Value, TUint_1 Prescale_PowOfTwo);
+  TBool GetPrescaleConst_Counter3(TUint_1 * Value, TUint_1 Prescale_PowOfTwo);
 }
 
 /*
