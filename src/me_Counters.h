@@ -2,7 +2,7 @@
 
 /*
   Author: Martin Eden
-  Last mod.: 2025-11-30
+  Last mod.: 2025-12-03
 */
 
 /*
@@ -42,7 +42,6 @@
 */
 
 #include <me_BaseTypes.h>
-#include <me_HardwareClockScaling.h>
 
 namespace me_Counters
 {
