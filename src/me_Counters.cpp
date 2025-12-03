@@ -2,13 +2,12 @@
 
 /*
   Author: Martin Eden
-  Last mod.: 2025-11-30
+  Last mod.: 2025-12-08
 */
 
 #include <me_Counters.h>
 
 #include <me_BaseTypes.h>
-#include <me_HardwareClockScaling.h>
 
 using namespace me_Counters;
 
