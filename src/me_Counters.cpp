@@ -2,7 +2,7 @@
 
 /*
   Author: Martin Eden
-  Last mod.: 2025-12-08
+  Last mod.: 2025-12-09
 */
 
 #include <me_Counters.h>
@@ -106,33 +106,61 @@ TAlgorithm_Counter3 TCounter3::GetAlgorithm()
 
 // ( Convert slowdown factor to hardware constant
 
-TBool me_Counters::GetPrescaleConst_Counter1(
-  TUint_1 * Result,
+TBool me_Counters::Prescale_HwFromSw_Counter1(
+  TUint_1 * HwValue,
   TUint_1 Prescale_PowOfTwo
 )
 {
   switch (Prescale_PowOfTwo)
   {
-    default:
-      return false;
-    case 0:
-      *Result = (TUint_1) TDriveSource_Counter1::Internal_FullSpeed;
-      break;
-    case 3:
-      *Result = (TUint_1) TDriveSource_Counter1::Internal_SlowBy2Pow3;
-      break;
-    case 6:
-      *Result = (TUint_1) TDriveSource_Counter1::Internal_SlowBy2Pow6;
-      break;
-    case 8:
-      *Result = (TUint_1) TDriveSource_Counter1::Internal_SlowBy2Pow8;
-      break;
-    case 10:
-      *Result = (TUint_1) TDriveSource_Counter1::Internal_SlowBy2Pow10;
-      break;
+    default: return false;
+    case 0: *HwValue = (TUint_1) TDriveSource_Counter1::Internal_FullSpeed; break;
+    case 3: *HwValue = (TUint_1) TDriveSource_Counter1::Internal_SlowBy2Pow3; break;
+    case 6: *HwValue = (TUint_1) TDriveSource_Counter1::Internal_SlowBy2Pow6; break;
+    case 8: *HwValue = (TUint_1) TDriveSource_Counter1::Internal_SlowBy2Pow8; break;
+    case 10: *HwValue = (TUint_1) TDriveSource_Counter1::Internal_SlowBy2Pow10; break;
   }
 
   return true;
+}
+
+TBool me_Counters::Prescale_HwFromSw_Counter2(
+  TUint_1 * HwValue,
+  TUint_1 Prescale_PowOfTwo
+)
+{
+  // Counters 1 and 2 have same prescale options
+  return Prescale_HwFromSw_Counter1(HwValue, Prescale_PowOfTwo);
+}
+
+TBool me_Counters::Prescale_HwFromSw_Counter3(
+  TUint_1 * HwValue,
+  TUint_1 Prescale_PowOfTwo
+)
+{
+  switch (Prescale_PowOfTwo)
+  {
+    default: return false;
+    case 0: *HwValue = (TUint_1) TSpeed_Counter3::Full; break;
+    case 3: *HwValue = (TUint_1) TSpeed_Counter3::SlowBy2Pow3; break;
+    case 5: *HwValue = (TUint_1) TSpeed_Counter3::SlowBy2Pow5; break;
+    case 6: *HwValue = (TUint_1) TSpeed_Counter3::SlowBy2Pow6; break;
+    case 7: *HwValue = (TUint_1) TSpeed_Counter3::SlowBy2Pow7; break;
+    case 8: *HwValue = (TUint_1) TSpeed_Counter3::SlowBy2Pow8; break;
+    case 10: *HwValue = (TUint_1) TSpeed_Counter3::SlowBy2Pow10; break;
+  }
+
+  return true;
+}
+
+// ( Temporary aliases
+
+TBool me_Counters::GetPrescaleConst_Counter1(
+  TUint_1 * Result,
+  TUint_1 Prescale_PowOfTwo
+)
+{
+  return Prescale_HwFromSw_Counter1(Result, Prescale_PowOfTwo);
 }
 
 TBool me_Counters::GetPrescaleConst_Counter2(
@@ -140,8 +168,7 @@ TBool me_Counters::GetPrescaleConst_Counter2(
   TUint_1 Prescale_PowOfTwo
 )
 {
-  // Counters 1 and 2 have same prescale options
-  return GetPrescaleConst_Counter1(Result, Prescale_PowOfTwo);
+  return Prescale_HwFromSw_Counter2(Result, Prescale_PowOfTwo);
 }
 
 TBool me_Counters::GetPrescaleConst_Counter3(
@@ -149,31 +176,56 @@ TBool me_Counters::GetPrescaleConst_Counter3(
   TUint_1 Prescale_PowOfTwo
 )
 {
-  switch (Prescale_PowOfTwo)
+  return Prescale_HwFromSw_Counter3(Result, Prescale_PowOfTwo);
+}
+
+// )
+
+// )
+
+// ( Convert hardware constant to slowdown factor
+
+TBool me_Counters::Prescale_SwFromHw_Counter1(
+  TUint_1 * Prescale_PowOfTwo,
+  TUint_1 HwValue
+)
+{
+  switch (TDriveSource_Counter1(HwValue))
   {
-    default:
-      return false;
-    case 0:
-      *Result = (TUint_1) TSpeed_Counter3::Full;
-      break;
-    case 3:
-      *Result = (TUint_1) TSpeed_Counter3::SlowBy2Pow3;
-      break;
-    case 5:
-      *Result = (TUint_1) TSpeed_Counter3::SlowBy2Pow5;
-      break;
-    case 6:
-      *Result = (TUint_1) TSpeed_Counter3::SlowBy2Pow6;
-      break;
-    case 7:
-      *Result = (TUint_1) TSpeed_Counter3::SlowBy2Pow7;
-      break;
-    case 8:
-      *Result = (TUint_1) TSpeed_Counter3::SlowBy2Pow8;
-      break;
-    case 10:
-      *Result = (TUint_1) TSpeed_Counter3::SlowBy2Pow10;
-      break;
+    default: return false;
+    case TDriveSource_Counter1::Internal_FullSpeed: *Prescale_PowOfTwo = 0; break;
+    case TDriveSource_Counter1::Internal_SlowBy2Pow3: *Prescale_PowOfTwo = 3; break;
+    case TDriveSource_Counter1::Internal_SlowBy2Pow6: *Prescale_PowOfTwo = 6; break;
+    case TDriveSource_Counter1::Internal_SlowBy2Pow8: *Prescale_PowOfTwo = 8; break;
+    case TDriveSource_Counter1::Internal_SlowBy2Pow10: *Prescale_PowOfTwo = 10; break;
+  }
+
+  return true;
+}
+
+TBool me_Counters::Prescale_SwFromHw_Counter2(
+  TUint_1 * Prescale_PowOfTwo,
+  TUint_1 HwValue
+)
+{
+  return Prescale_SwFromHw_Counter1(Prescale_PowOfTwo, HwValue);
+}
+
+TBool me_Counters::Prescale_SwFromHw_Counter3(
+  TUint_1 * Prescale_PowOfTwo,
+  TUint_1 HwValue
+)
+{
+  switch (TSpeed_Counter3(HwValue))
+  {
+    default: return false;
+    case TSpeed_Counter3::Full: *Prescale_PowOfTwo = 0; break;
+    case TSpeed_Counter3::SlowBy2Pow3: *Prescale_PowOfTwo = 3; break;
+    case TSpeed_Counter3::SlowBy2Pow5: *Prescale_PowOfTwo = 5; break;
+    case TSpeed_Counter3::SlowBy2Pow6: *Prescale_PowOfTwo = 6; break;
+    case TSpeed_Counter3::SlowBy2Pow7: *Prescale_PowOfTwo = 7; break;
+    case TSpeed_Counter3::SlowBy2Pow8: *Prescale_PowOfTwo = 8; break;
+    case TSpeed_Counter3::SlowBy2Pow10: *Prescale_PowOfTwo = 10; break;
   }
 
   return true;
@@ -181,12 +233,11 @@ TBool me_Counters::GetPrescaleConst_Counter3(
 
 // )
 
-
-
 /*
   2025-01-01
   2025-01-09
   2025-02-21
   2025-11-26
   2025-11-30
+  2025-12-09
 */

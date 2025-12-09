@@ -2,7 +2,7 @@
 
 /*
   Author: Martin Eden
-  Last mod.: 2025-12-03
+  Last mod.: 2025-12-09
 */
 
 /*
@@ -317,9 +317,18 @@ namespace me_Counters
   };
 
   // Convert slowdown factor to hardware constant
+  TBool Prescale_HwFromSw_Counter1(TUint_1 * HwValue, TUint_1 Prescale_PowOfTwo);
+  TBool Prescale_HwFromSw_Counter2(TUint_1 * HwValue, TUint_1 Prescale_PowOfTwo);
+  TBool Prescale_HwFromSw_Counter3(TUint_1 * HwValue, TUint_1 Prescale_PowOfTwo);
+  // Temporary aliases
   TBool GetPrescaleConst_Counter1(TUint_1 * Value, TUint_1 Prescale_PowOfTwo);
   TBool GetPrescaleConst_Counter2(TUint_1 * Value, TUint_1 Prescale_PowOfTwo);
   TBool GetPrescaleConst_Counter3(TUint_1 * Value, TUint_1 Prescale_PowOfTwo);
+
+  // Reverse conversion
+  TBool Prescale_SwFromHw_Counter1(TUint_1 * Prescale_PowOfTwo, TUint_1 HwValue);
+  TBool Prescale_SwFromHw_Counter2(TUint_1 * Prescale_PowOfTwo, TUint_1 HwValue);
+  TBool Prescale_SwFromHw_Counter3(TUint_1 * Prescale_PowOfTwo, TUint_1 HwValue);
 }
 
 /*
@@ -333,4 +342,5 @@ namespace me_Counters
   2025-10-26
   2025-11-26
   2025-11-29
+  2025-12-09
 */
