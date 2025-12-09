@@ -153,34 +153,6 @@ TBool me_Counters::Prescale_HwFromSw_Counter3(
   return true;
 }
 
-// ( Temporary aliases
-
-TBool me_Counters::GetPrescaleConst_Counter1(
-  TUint_1 * Result,
-  TUint_1 Prescale_PowOfTwo
-)
-{
-  return Prescale_HwFromSw_Counter1(Result, Prescale_PowOfTwo);
-}
-
-TBool me_Counters::GetPrescaleConst_Counter2(
-  TUint_1 * Result,
-  TUint_1 Prescale_PowOfTwo
-)
-{
-  return Prescale_HwFromSw_Counter2(Result, Prescale_PowOfTwo);
-}
-
-TBool me_Counters::GetPrescaleConst_Counter3(
-  TUint_1 * Result,
-  TUint_1 Prescale_PowOfTwo
-)
-{
-  return Prescale_HwFromSw_Counter3(Result, Prescale_PowOfTwo);
-}
-
-// )
-
 // )
 
 // ( Convert hardware constant to slowdown factor
