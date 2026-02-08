@@ -1,0 +1,31 @@
+(
+  Tested Counter 1 modes on oscilloscope
+
+  Pin actions can be grouped to ((Set Clear) (Toggle)).
+  For Fast PWM To 255 meanings of Set and Clear are swapped.
+
+                   S C T  S C T
+  Count to 255     - - X  - - X
+  Count to A       - - X  - - X
+  Fast PWM to 255  X X -  X X -
+  Fast PWM to A    - - X  X X -
+  PWM to 255       // Not tested. Assume as PWM to A
+  PWM to A         - - X  X↔X -
+
+) 2026-02-08
+
+(
+  I'm not going to develop this module further
+
+  With all that weirdness it's no longer comfortable to directly
+  use it for time tracking, PWM and servos.
+
+  I already have some and will develop specialized modules for that.
+
+  I like module design. Problem is that hardware is too weird.
+  To deal with it we need to write specialized code.
+  Specialized code means additional types for area concepts.
+  My modules try to be limited but exhaustive.
+  So that extensions do not belong here.
+
+) 2026-02-08
