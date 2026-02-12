@@ -29,3 +29,25 @@
   So that extensions do not belong here.
 
 ) 2026-02-08
+(
+  Unifying abstractions layer
+
+  I am thinking about it. Point is that caller need not know what
+  exact counter it uses. Something like "give me counter for
+  period five-second with millisecond precision".
+
+  But my code does not need this. It's hardwired to custom counter it
+  likes. And where that counter selection decision-making code should
+  be? It's operation system land. I'm not interested in writing OS
+  just for my programs.
+
+  Still, there is problem of "what is the one microsecond?".
+  Because counters just count ticks. And they store them as number of
+  batches. And batch size is like one or 8 or 1024 ticks. And available
+  batch sizes are generally counter-specific.
+
+  That's essential because we have function that converts between
+  number of batches and human seconds. But it needs to know counter
+  specifications for that.
+
+) 2026-02-12
