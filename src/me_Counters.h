@@ -2,7 +2,7 @@
 
 /*
   Author: Martin Eden
-  Last mod.: 2025-12-09
+  Last mod.: 2026-02-12
 */
 
 /*
@@ -108,6 +108,12 @@ namespace me_Counters
   typedef TAlgorithm_Counters13 TAlgorithm_Counter1;
   typedef TAlgorithm_Counters13 TAlgorithm_Counter3;
 
+  /*
+    Pin action on match
+
+    For some modes meaning of "Set" and "Clear" is reversed.
+    As it's context-dependent we can't have proper names at this level.
+  */
   enum struct TPinAction
   {
     None = 0,
