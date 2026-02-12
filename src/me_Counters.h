@@ -9,36 +9,23 @@
   There is no time. There are no timers.
 
   Just counters. Ticking with speed proportional to main speed.
-
-  ( Yes, main speed is typically fixed to some millions pulses per
-    second. It's even called "clock" and pulses are called "ticks".
-  ) Still, by design it's just counters.
 */
 
 /*
-  There are three counters on ATmega328/P.
+  In a nutshell counter is value incrementer/decrementer that
+  runs alongside main code.
 
-  Counter concept
+  When value matches some other value it can toggle pin.
+  Pins are hardcoded (hardwired). Also it can raise interrupts.
 
-    // Runs in parallel from main clock source
-    while Alive
-      for i = 1, N
-        Sleep()
-        if (i == MarkA)
-          MarkAEvent()
-        if (i == MarkB)
-          MarkBEvent()
-      ReachedEndEvent()
+  Each counter has two memory slots for values to match.
+  In code they are called Mark A and Mark B.
 
-  Events are just setting bits in memory. Hardware magic allows to call
-  interrupt handlers upon touching these bits.
+  Despite cognitive load from reading datasheet there are only
+  two modes:
 
-  ( There is fancier symmetric loop:
-
-    for 1, N (...);
-    for N, 1 (...);
-
-  ) that is used for "correct" PWM modes.
+    * Count from 0 to N
+    * Count from 0 to N to 0
 */
 
 #include <me_BaseTypes.h>
