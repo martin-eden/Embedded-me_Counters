@@ -28,6 +28,8 @@
     * Count from 0 to N to 0
 */
 
+#pragma once
+
 #include <me_BaseTypes.h>
 
 namespace me_Counters
