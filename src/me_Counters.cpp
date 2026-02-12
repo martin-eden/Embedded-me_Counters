@@ -2,7 +2,7 @@
 
 /*
   Author: Martin Eden
-  Last mod.: 2025-12-09
+  Last mod.: 2026-02-12
 */
 
 #include <me_Counters.h>
@@ -206,10 +206,5 @@ TBool me_Counters::Prescale_SwFromHw_Counter3(
 // )
 
 /*
-  2025-01-01
-  2025-01-09
-  2025-02-21
-  2025-11-26
-  2025-11-30
-  2025-12-09
+  2025 # # # # # #
 */
