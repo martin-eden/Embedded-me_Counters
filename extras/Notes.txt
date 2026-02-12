@@ -32,9 +32,9 @@
 (
   Unifying abstractions layer
 
-  I am thinking about it. Point is that caller need not know what
+  I am thinking about it. Point is that caller needs not know what
   exact counter it uses. Something like "give me counter for
-  period five-second with millisecond precision".
+  period of five-seconds with millisecond precision".
 
   But my code does not need this. It's hardwired to custom counter it
   likes. And where that counter selection decision-making code should
